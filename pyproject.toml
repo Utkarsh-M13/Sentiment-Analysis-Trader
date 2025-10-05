@@ -1,0 +1,13 @@
+title = "Sentiment Analysis Trader"
+
+[owner]
+name = "Utkarsh Majithia"
+
+[project]
+name = "Sentiment-Analysis-Trader"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.setuptools]
+package-dir = {"" = "src"}
