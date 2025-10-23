@@ -9,7 +9,6 @@ def read_yaml(path):
 def ensure_dir(p):
     Path(p).mkdir(parents=True, exist_ok=True)
     
-
 def load_split(split):
     path = f"data/processed/total_{split}.parquet"
     df = pd.read_parquet(path)
