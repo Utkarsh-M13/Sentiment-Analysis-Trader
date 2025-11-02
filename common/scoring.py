@@ -1,73 +1,47 @@
-# scoring.py
-import math, torch
-from typing import Iterable, List, Dict, Optional
+# scoring_regression.py
+import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-class FinBertScorer:
-    """
-    - model_dir: path
-    - label_index: pick which logit/prob you consider "bullish" (0..num_labels-1)
-      For common FinBERT (3 labels: negative, neutral, positive) -> bullish_idx=2
-    - max_len: truncate safely; keep it fixed for predictable latency
-    """
-    def __init__(self, model_dir: str, bullish_idx: int = 2, max_len: int = 128, device: Optional[str] = None):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=True)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_dir)
-        self.model.eval()
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.device = torch.device(device)
-        self.model.to(self.device)
-        self.bullish_idx = bullish_idx
-        self.max_len = max_len
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+MODEL_DIR = "/training/data/artifacts/stage1_from_splits/best"
+MAX_LEN = 64
+BATCH = 64
 
-    @torch.inference_mode()
-    def score(self, items: Iterable[Dict], text_key: str = "text", batch_size: int = 32) -> List[Dict]:
-        """
-        items: iterable of dicts, each must have items[text_key]
-               (you can also include article_id, etc., they’ll be forwarded)
-        returns: list of dicts with original keys + score fields
-        """
-        buf, out = [], []
-        append = out.append
+# load once
+tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR).to(DEVICE)
+model.eval()
 
-        def flush():
-            if not buf: return
-            enc = self.tokenizer(
-                [x[text_key] for x in buf],
-                padding=True, truncation=True, max_length=self.max_len,
-                return_tensors="pt", return_attention_mask=True
+def _text_from_article(a: dict) -> str:
+    # choose your text fields consistently with training
+    title = a.get("title") or ""
+    desc  = a.get("description") or ""
+    txt = (title + " " + desc).strip()
+    return txt if txt else title or desc
+
+def score_articles_regression(articles: list[dict]) -> list[dict]:
+    """
+    Returns [{"provider_id": <id>, "score_raw": <float>}]
+    """
+    texts = [_text_from_article(a) for a in articles]
+    out = []
+
+    with torch.no_grad():
+        for i in range(0, len(texts), BATCH):
+            batch_txt = texts[i:i+BATCH]
+            enc = tokenizer(
+                batch_txt,
+                truncation=True, padding=True, max_length=MAX_LEN,
+                return_tensors="pt"
             )
-            input_len = enc["input_ids"].shape[1]
-            enc = {k: v.to(self.device) for k, v in enc.items()}
-            logits = self.model(**enc).logits  # [B, C]
-            probs = torch.softmax(logits, dim=-1)  # [B, C]
-            bull = probs[:, self.bullish_idx]      # bullish prob in [0,1]
-            # score_raw: bullish prob; score_std: z-score via logit transform (optional)
-            # logit(p) ~ N(0,1) if you standardize later; here we just give logit
-            eps = 1e-6
-            score_raw = bull
-            score_std = torch.log((bull + eps) / (1 - bull + eps))  # logit
+            enc = {k: v.to(DEVICE) for k, v in enc.items()}
+            logits = model(**enc).logits           # shape [N, 1]
+            scores = logits.squeeze(1).cpu().tolist()  # list of floats
 
-            for i, item in enumerate(buf):
-                # detect truncation by checking if CLS..SEP filled to max_len and tokenizer flagged overflow
-                # fast tokenizer doesn’t return overflow flag by default; practical proxy:
-                truncated = len(self.tokenizer.tokenize(item[text_key])) > self.max_len - 2
-                append({
-                    **item,
-                    "score_raw": float(score_raw[i].item()),
-                    "score_std": float(score_std[i].item()),
-                    "meta": {
-                        "max_len": self.max_len,
-                        "used_len": int(input_len),
-                        "truncated": bool(truncated),
-                    }
+            for j, s in enumerate(scores):
+                idx = i + j
+                out.append({
+                    "provider_id": articles[idx].get("id"),
+                    "score_raw": float(s),
                 })
-            buf.clear()
-
-        for it in items:
-            buf.append(it)
-            if len(buf) >= batch_size:
-                flush()
-        flush()
-        return out
+    return out
