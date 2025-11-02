@@ -27,7 +27,6 @@ WARMUP_RATIO = 0.10
 WEIGHT_DECAY = 0.01
 FREEZE_ENCODER = True
 SEED = 42
-TAU = 0.0
 UNFREEZE_LAYERS = 1
 
 OUTPUT_DIR = "data/artifacts/stage1_from_splits"
