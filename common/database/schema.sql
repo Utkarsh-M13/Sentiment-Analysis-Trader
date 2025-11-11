@@ -37,20 +37,20 @@ CREATE TABLE IF NOT EXISTS news_headlines (
 CREATE INDEX IF NOT EXISTS idx_news_published ON news_headlines (published_utc DESC);
 CREATE INDEX IF NOT EXISTS idx_news_ticker_time ON news_headlines (tickers, published_utc DESC);
 
--- -- 2) Model scores per headline
--- CREATE TABLE IF NOT EXISTS headline_scores (
---   id BIGSERIAL PRIMARY KEY,
---   headline_id BIGINT NOT NULL REFERENCES news_headlines(id) ON DELETE CASCADE,
---   model_name TEXT NOT NULL,                  -- 'finbert'
---   model_version TEXT NOT NULL,               -- '2025-10-30'
---   score REAL NOT NULL,                       -- raw sentiment or signed score
---   p_up REAL,                                 -- optional probability style output
---   extra JSONB,                               -- logits, spans, etc
---   scored_at TIMESTAMPTZ NOT NULL DEFAULT now(),
---   UNIQUE (headline_id, model_name, model_version)
--- );
--- CREATE INDEX IF NOT EXISTS idx_scores_headline ON headline_scores (headline_id);
--- CREATE INDEX IF NOT EXISTS idx_scores_model_time ON headline_scores (model_name, scored_at DESC);
+-- 2) Model scores per headline
+CREATE TABLE IF NOT EXISTS headline_scores (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  headline_id UUID NOT NULL REFERENCES news_headlines(id) ON DELETE CASCADE,
+  provider_id TEXT NOT NULL,                 
+  model_name TEXT NOT NULL,                  -- 'finbert'
+  model_version TEXT NOT NULL,               -- '2025-10-30'
+  score REAL NOT NULL,                       -- raw sentiment or signed score
+  p_up REAL,                                 -- optional probability style output
+  scored_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (headline_id, model_name, model_version)
+);
+CREATE INDEX IF NOT EXISTS idx_scores_headline ON headline_scores (headline_id);
+CREATE INDEX IF NOT EXISTS idx_scores_model_time ON headline_scores (model_name, scored_at DESC);
 
 -- -- 3) Daily features used by backtests
 -- CREATE TABLE IF NOT EXISTS daily_features (

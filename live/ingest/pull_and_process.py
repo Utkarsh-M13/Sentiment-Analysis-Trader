@@ -6,6 +6,7 @@ from sqlalchemy import text
 from common.db import SessionLocal
 from .watermark import get_watermark, set_watermark
 from common.logger import get_logger
+from common.scoring import score_articles_regression
 log = get_logger("ingest")
 
 def pull_and_process_data():
@@ -21,8 +22,9 @@ def pull_and_process_data():
         articles = data.get("results", [])
         with SessionLocal() as db, db.begin():
             set_watermark(db, "last_processed_timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
-        add_articles_to_db(articles)
-        
+        articles = add_articles_to_db(articles)
+        scores = score_articles_regression(articles)
+        add_scores_to_db(scores)
         log.info(f"Processed {len(articles)} articles from Polygon API.")
     except httpx.TimeoutException:
         log.error("Polygon API timed out.")
@@ -35,10 +37,12 @@ def pull_and_process_data():
 def add_articles_to_db(articles):
     with SessionLocal() as db, db.begin():
         for article in articles:
-          db.execute(text("""
+            res = db.execute(text("""
                           INSERT INTO news_headlines(provider, provider_id, tickers, published_utc, url, title, description, source_name)
                           VALUES (:provider, :provider_id, :tickers, :published_utc, :url, :title, :description, :source_name)
-                          ON CONFLICT (provider, provider_id) DO NOTHING
+                          ON CONFLICT (provider, provider_id) 
+                          DO UPDATE SET title = news_headlines.title
+                          RETURNING id;
                           """ ),{
                               "provider": "Polygon",
                               "provider_id": article["id"],
@@ -48,4 +52,24 @@ def add_articles_to_db(articles):
                               "title": article["title"],
                               "description": article["description"],
                               "source_name": article["publisher"]["name"]
-                          })               
+                          })
+            row = res.fetchone()
+            article["provider_id"] = article["id"]
+            article["id"] = row[0] if row else None
+    return articles
+
+def add_scores_to_db(scores):
+    with SessionLocal() as db, db.begin():
+        for article in scores:
+          db.execute(text("""
+                          INSERT INTO headline_scores(headline_id, provider_id, model_name, model_version, score, p_up)
+                          VALUES (:headline_id, :provider_id, :model_name, :model_version, :score, :p_up)
+                          ON CONFLICT (headline_id, model_name, model_version) DO NOTHING
+                          """ ),{
+                              "headline_id": article["id"],
+                              "provider_id": article["provider_id"],
+                              "model_name": "finbert-regression-v1",
+                              "model_version": "2025-10-30",
+                              "score": article["score_raw"],
+                              "p_up": None,
+                          })

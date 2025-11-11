@@ -20,13 +20,10 @@ def _text_from_article(a: dict) -> str:
     return txt if txt else title or desc
 
 def score_articles_regression(articles: list[dict]) -> list[dict]:
-    """
-    Returns [{"provider_id": <id>, "score_raw": <float>}]
-    """
     texts = [_text_from_article(a) for a in articles]
     out = []
 
-    with torch.no_grad():
+    with torch.inference_mode():
         for i in range(0, len(texts), BATCH):
             batch_txt = texts[i:i+BATCH]
             enc = tokenizer(
@@ -41,6 +38,7 @@ def score_articles_regression(articles: list[dict]) -> list[dict]:
             for j, s in enumerate(scores):
                 idx = i + j
                 out.append({
+                    "id": articles[idx].get("id"),
                     "provider_id": articles[idx].get("id"),
                     "score_raw": float(s),
                 })
