@@ -52,6 +52,38 @@ CREATE TABLE IF NOT EXISTS headline_scores (
 CREATE INDEX IF NOT EXISTS idx_scores_headline ON headline_scores (headline_id);
 CREATE INDEX IF NOT EXISTS idx_scores_model_time ON headline_scores (model_name, scored_at DESC);
 
+
+CREATE TABLE IF NOT EXISTS trade_logs (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  traded_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  -- what was traded
+  ticker          TEXT NOT NULL,
+  side            TEXT NOT NULL,              -- 'BUY' or 'SELL'
+  qty             INTEGER NOT NULL,
+  price           DOUBLE PRECISION,           -- fill or mark price
+  ib_order_id     BIGINT,                     -- from IBKR, if available
+
+  -- position context
+  prev_shares     INTEGER NOT NULL,
+  new_shares      INTEGER NOT NULL,
+
+  -- account context
+  equity          DOUBLE PRECISION,           -- NetLiquidation at decision time
+
+  -- model context
+  signal          DOUBLE PRECISION,           -- today_signal
+  pred_use        DOUBLE PRECISION,           -- today_pred_use
+  num_headlines   INTEGER,                    -- headlines used for today
+  as_of_date      DATE NOT NULL,              -- trading date
+
+  -- raw series info (optional, but useful)
+  cfg_json        JSONB                       -- copy of best_threshold.json or just band/dir
+);
+
+CREATE INDEX IF NOT EXISTS idx_trade_logs_date ON trade_logs (as_of_date);
+CREATE INDEX IF NOT EXISTS idx_trade_logs_ticker ON trade_logs (ticker);
+
 -- -- 3) Daily features used by backtests
 -- CREATE TABLE IF NOT EXISTS daily_features (
 --   id BIGSERIAL PRIMARY KEY,

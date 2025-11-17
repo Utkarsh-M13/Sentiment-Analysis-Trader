@@ -1,15 +1,18 @@
 # scoring_regression.py
+from pathlib import Path
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-MODEL_DIR = "/training/data/artifacts/stage1_from_splits/best"
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_DIR = BASE_DIR.parent / "training" / "data" / "artifacts" / "stage1_from_splits" / "best"
 MAX_LEN = 64
 BATCH = 64
 
 # load once
 tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR).to(DEVICE)
+print(Path(MODEL_DIR))
+model = AutoModelForSequenceClassification.from_pretrained(Path(MODEL_DIR))
 model.eval()
 
 def _text_from_article(a: dict) -> str:

@@ -10,14 +10,16 @@ from common.scoring import score_articles_regression
 log = get_logger("ingest")
 
 def pull_and_process_data():
-  POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
-  headers = {"Authorization": f"Bearer {POLYGON_API_KEY}"}
+  MASSIVE_API_KEY = os.getenv("MASSIVE_API_KEY")
+  headers = {"Authorization": f"Bearer {MASSIVE_API_KEY}"}
   since_timestamp = None
   with SessionLocal() as db, db.begin():
     since_timestamp = get_watermark(db, "last_processed_timestamp", default="2025-10-01T00:00:00Z")
+  since_timestamp = "2025-10-01T00:00:00Z"
   with httpx.Client() as client:
     try:
-        response = client.get(f"https://api.massive.com/v2/reference/news?ticker=SPY&published_utc.gte={since_timestamp}&order=asc&limit=10&sort=published_utc&apiKey={POLYGON_API_KEY}", headers=headers)
+        response = client.get(f"https://api.massive.com/v2/reference/news?ticker=SPY&published_utc.gte={since_timestamp}&order=asc&limit=100&sort=published_utc", headers=headers)
+        print(response)
         data = response.json()
         articles = data.get("results", [])
         with SessionLocal() as db, db.begin():
@@ -73,3 +75,5 @@ def add_scores_to_db(scores):
                               "score": article["score_raw"],
                               "p_up": None,
                           })
+
+
