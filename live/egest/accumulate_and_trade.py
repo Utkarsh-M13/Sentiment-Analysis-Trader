@@ -7,12 +7,22 @@ from pathlib import Path
 from common.db import SessionLocal
 from common.logger import get_logger
 from live.ingest.watermark import get_watermark, set_watermark
-from ib_insync import *
+import os
+from alpaca_trade_api import REST
 
 log = get_logger("trade")
 
 MIN_NOTIONAL = 100.0    
 MAX_DELTA_SIG = 0.8
+
+APCA_API_BASE_URL = os.getenv("APCA_API_BASE_URL", "https://paper-api.alpaca.markets/v2")
+
+def get_alpaca_client() -> REST:
+    return REST(
+        key_id=os.getenv("APCA_API_KEY_ID"),
+        secret_key=os.getenv("APCA_API_SECRET_KEY"),
+        base_url=APCA_API_BASE_URL,
+    )
 
 
 def accumulate_and_trade():
@@ -81,45 +91,38 @@ def accumulate_and_trade():
         f"Signal={today_signal:.4f} | pred_use={today_pred_use:.4f} | headlines={num_headlines_today}"
     )
 
-    # ---- IBKR connection and sizing ----
-    ib = IB()
-    ib.connect('127.0.0.1', 4002, clientId=1)
-    log.info("Connected to IBKR.")
-    ib.reqMarketDataType(3)
+    # ---- Alpaca connection and sizing ----
+    api = get_alpaca_client()
+    log.info("Connected to Alpaca (paper).")
 
-    contract = Stock('SPY', 'SMART', 'USD')
+    # Account equity
+    account = api.get_account()
+    equity = float(account.equity)
 
-    acct_summary = ib.accountSummary()
-    net_liq = next((a for a in acct_summary if a.tag == 'NetLiquidation'), None)
-    if net_liq is None:
-        log.info("Could not find NetLiquidation; aborting.")
-        return
+    # Current SPY position
+    try:
+        pos = api.get_position("SPY")
+        current_shares = int(float(pos.qty))
+    except Exception:
+        # No current position
+        current_shares = 0
 
-    equity = float(net_liq.value)
+    # Market price for SPY (latest trade)
+    latest_trade = api.get_latest_trade("SPY")
+    price = float(latest_trade.price)
 
-    # fetch current position
-    positions = ib.positions()
-    current_shares = 0
-    for p in positions:
-        if isinstance(p.contract, Contract) and p.contract.symbol == "SPY" and p.contract.secType == "STK":
-            current_shares = int(p.position)
-            break
-
-    # market price
-    ticker = ib.reqMktData(contract, '', snapshot=True)
-    ib.sleep(2)
-    price = ticker.last or ticker.close or ticker.marketPrice()
-    if price is None or price <= 0:
+    if price <= 0:
         log.info("No valid SPY price; aborting.")
         return
 
+    # Target notional & shares
     target_notional = today_signal * equity
     target_shares = int(target_notional // price)
 
     current_sig = (current_shares * price) / equity if equity > 0 else 0.0
     raw_delta_sig = today_signal - current_sig
 
-    # cap allocation change
+    # Cap allocation change
     if abs(raw_delta_sig) > MAX_DELTA_SIG:
         capped_sig = current_sig + np.sign(raw_delta_sig) * MAX_DELTA_SIG
         capped_notional = capped_sig * equity
@@ -137,19 +140,31 @@ def accumulate_and_trade():
         log.info("No trade (already at target or too small).")
         return
 
-    side = "BUY" if delta_shares > 0 else "SELL"
+    side = "buy" if delta_shares > 0 else "sell"
     qty = abs(delta_shares)
 
-    order = MarketOrder(side, qty)
-    trade = ib.placeOrder(contract, order)
-    ib.sleep(2)
+    # Place market order
+    order = api.submit_order(
+        symbol="SPY",
+        qty=qty,
+        side=side,
+        type="market",
+        time_in_force="day",
+    )
 
-    ib_order_id = getattr(trade.order, "orderId", None)
-    fill_price = trade.orderStatus.avgFillPrice or price
+    # Alpaca order ID / fills
+    alpaca_order_id = order.id
 
-    log.info(f"Placed {side} {qty} SPY at ~{fill_price:.2f}, orderId={ib_order_id}")
+    # Try to get fill price (may not be immediate)
+    try:
+        filled_order = api.get_order(alpaca_order_id)
+        fill_price = float(filled_order.filled_avg_price or price)
+    except Exception:
+        fill_price = price
 
-    new_shares = current_shares + (qty if side == "BUY" else -qty)
+    log.info(f"Placed {side.upper()} {qty} SPY at ~{fill_price:.2f}, orderId={alpaca_order_id}")
+
+    new_shares = current_shares + (qty if side == "buy" else -qty)
 
     # ---- log trade to DB ----
     log_trade(
@@ -157,7 +172,7 @@ def accumulate_and_trade():
         side=side,
         qty=qty,
         price=fill_price,
-        ib_order_id=ib_order_id,
+        order_id=alpaca_order_id,
         prev_shares=current_shares,
         new_shares=new_shares,
         equity=equity,
@@ -176,7 +191,7 @@ def accumulate_and_trade():
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-CONFIG_DIR = BASE_DIR.parent / "training" / "experiments" / "best_threshold.json"
+CONFIG_DIR = BASE_DIR.parent / "common" / "best" / "best_threshold.json"
 
 def load_cfg(path=CONFIG_DIR):
     with open(path, "r") as f:
@@ -220,7 +235,7 @@ def log_trade(
     side: str,
     qty: int,
     price: float | None,
-    ib_order_id: int | None,
+    order_id: int | None,
     prev_shares: int,
     new_shares: int,
     equity: float,
@@ -241,7 +256,7 @@ def log_trade(
                   side,
                   qty,
                   price,
-                  ib_order_id,
+                  order_id,
                   prev_shares,
                   new_shares,
                   equity,
@@ -257,7 +272,7 @@ def log_trade(
                   :side,
                   :qty,
                   :price,
-                  :ib_order_id,
+                  :order_id,
                   :prev_shares,
                   :new_shares,
                   :equity,
@@ -274,7 +289,7 @@ def log_trade(
                 "side": side,
                 "qty": qty,
                 "price": price,
-                "ib_order_id": ib_order_id,
+                "order_id": order_id,
                 "prev_shares": prev_shares,
                 "new_shares": new_shares,
                 "equity": equity,

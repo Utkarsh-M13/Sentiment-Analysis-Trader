@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS trade_logs (
   side            TEXT NOT NULL,              -- 'BUY' or 'SELL'
   qty             INTEGER NOT NULL,
   price           DOUBLE PRECISION,           -- fill or mark price
-  ib_order_id     BIGINT,                     -- from IBKR, if available
+  order_id     TEXT,                     -- from IBKR, if available
 
   -- position context
   prev_shares     INTEGER NOT NULL,

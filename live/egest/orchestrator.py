@@ -21,9 +21,16 @@ def is_trading_session_now() -> bool:
     end = dt_time(16, 0)
     t = now.time()
     return start <= t <= end
-  
 
-def main():
+def handler(event, context):
+    """
+    AWS Lambda entrypoint for ingest.
+    """
+    # If you ever want to override date via the event, you can read it here.
+    run_egest()
+    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
+def run_egest():
   if not is_trading_session_now():
         log.info("Not in trading session - skipping accumulate_and_trade().")
         return

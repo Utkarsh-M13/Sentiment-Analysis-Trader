@@ -5,7 +5,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BASE_DIR = Path(__file__).resolve().parent
-MODEL_DIR = BASE_DIR.parent / "training" / "data" / "artifacts" / "stage1_from_splits" / "best"
+MODEL_DIR = BASE_DIR.parent / "common" / "best"
 MAX_LEN = 64
 BATCH = 64
 
