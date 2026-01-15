@@ -10,7 +10,7 @@ US_EASTERN = pytz.timezone("US/Eastern")
 
 def is_trading_session_now() -> bool:
     """
-    - weekday (Mon–Fri)
+    - weekday (Mon-Fri)
     - between 9:30 and 16:00 ET
     """
     now = datetime.now(US_EASTERN)
@@ -39,7 +39,3 @@ def run_egest():
   log.info("Starting EGEST orchestrator.")
   accumulate_and_trade()
   log.info("Finished EGEST orchestrator.")
-
-
-if __name__ == "__main__":
-    main()

@@ -11,7 +11,6 @@ BATCH = 64
 
 # load once
 tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-print(Path(MODEL_DIR))
 model = AutoModelForSequenceClassification.from_pretrained(Path(MODEL_DIR))
 model.eval()
 

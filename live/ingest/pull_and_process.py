@@ -15,11 +15,10 @@ def pull_and_process_data():
   since_timestamp = None
   with SessionLocal() as db, db.begin():
     since_timestamp = get_watermark(db, "last_processed_timestamp", default="2025-10-01T00:00:00Z")
-  since_timestamp = "2025-10-01T00:00:00Z"
+    
   with httpx.Client() as client:
     try:
         response = client.get(f"https://api.massive.com/v2/reference/news?ticker=SPY&published_utc.gte={since_timestamp}&order=asc&limit=100&sort=published_utc", headers=headers)
-        print(response)
         data = response.json()
         articles = data.get("results", [])
         with SessionLocal() as db, db.begin():
