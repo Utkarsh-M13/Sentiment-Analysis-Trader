@@ -15,11 +15,27 @@ def pull_and_process_data():
   since_timestamp = None
   with SessionLocal() as db, db.begin():
     since_timestamp = get_watermark(db, "last_processed_timestamp", default="2025-10-01T00:00:00Z")
-    
+
+  print(f"Pulling data since {since_timestamp}")
+
   with httpx.Client() as client:
     try:
-        response = client.get(f"https://api.massive.com/v2/reference/news?ticker=SPY&published_utc.gte={since_timestamp}&order=asc&limit=100&sort=published_utc", headers=headers)
+        params = {
+            "ticker": "SPY",
+            "published_utc.gte": since_timestamp,
+            "order": "asc",
+            "limit": 100,
+            "sort": "published_utc",
+        }
+
+        response = client.get(
+            "https://api.massive.com/v2/reference/news",
+            headers=headers,
+            params=params,
+        )
+        print(f"Response status code: {response}")
         data = response.json()
+        print(data)
         articles = data.get("results", [])
         with SessionLocal() as db, db.begin():
             set_watermark(db, "last_processed_timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
@@ -75,4 +91,7 @@ def add_scores_to_db(scores):
                               "p_up": None,
                           })
 
-
+if __name__ == "__main__":
+    log.info("Starting pull_and_process_data()")
+    pull_and_process_data()
+    log.info("Finished pull_and_process_data()")
