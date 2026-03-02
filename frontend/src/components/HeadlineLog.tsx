@@ -97,21 +97,27 @@ const columns = [
     cell: (info) => {
       const row = info.row.original;
       const title = info.getValue();
-      return row.url ? (
-        <a
-          href={row.url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-white/90 hover:text-white transition-colors truncate"
-          title={title}
-        >
-          {title}
-        </a>
-      ) : (
-        <span className="text-white/90 truncate" title={title}>
-          {title}
-        </span>
-      );
+      const inner = (
+    <span className="block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+      {title}
+    </span>
+  );
+
+  return row.url ? (
+    <a
+      href={row.url}
+      target="_blank"
+      rel="noreferrer"
+      className="block min-w-0 text-white/90 hover:text-white transition-colors hover:underline"
+      title={title}
+    >
+      {inner}
+    </a>
+  ) : (
+    <span className="block min-w-0 text-white/90" title={title}>
+      {inner}
+    </span>
+  );
     },
   }),
   col.accessor("source", {
