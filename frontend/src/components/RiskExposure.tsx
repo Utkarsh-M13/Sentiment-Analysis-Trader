@@ -18,7 +18,7 @@ const signalData = [
 const SignalGraph = () => {
   return (
     <div>
-      <div className="text-[8px] text-white/85 mb-2">Signal Graph</div>
+      <div className="text-[8px] text-white/85 mb-2 mt-8">Signal Graph</div>
 
       <div className="h-20 w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
@@ -88,7 +88,7 @@ const RiskExposure = () => {
 
   return (
     <div className="w-40 h-75 rounded-lg purple-shadow p-4">
-      <div className="text-md font-semibold mb-2 tracking-tight text-white">
+      <div className="text-md font-semibold mb-4 tracking-tight text-white">
         Risk & Exposure
       </div>
 

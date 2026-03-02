@@ -10,9 +10,9 @@ import TradeLog from "./components/TradeLog"
 function App() {
 
   return (
-    <div className="w-full min-h-screen flex gap-6 flex-col">
+    <div className="w-full min-h-screen flex gap-6 flex-col justify-center items-center ">
       <Topbar></Topbar>
-      <div className="h-75 w-full pl-7 pr-7 mt-30 flex gap-5">
+      <div className="h-75 pl-7 pr-7 flex gap-5">
         <EquityCurve></EquityCurve>
         <div className="h-75 w-40 flex flex-col gap-5">
           <TotalEquity></TotalEquity>
@@ -20,7 +20,7 @@ function App() {
         </div>
         <TradeLog></TradeLog>
       </div>
-      <div className="h-75 w-full pl-7 pr-7 flex gap-5">
+      <div className="h-75 pl-7 pr-7 flex gap-5">
         <HeadlineLog></HeadlineLog>
         <BnH></BnH> 
         <RiskExposure></RiskExposure>
