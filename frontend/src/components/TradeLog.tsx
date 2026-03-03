@@ -6,16 +6,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
-
-type TradeRow = {
-  traded_at: string;
-  symbol: string;
-  side: "BUY" | "SELL";
-  qty: number;
-  price: number;
-  notional: number;
-  sig: number;
-};
+import { fetchTrades, type TradeRow } from "../lib/fetchData";
 
 // type TradesResponse = {
 //   rows: TradeRow[];
@@ -24,98 +15,98 @@ type TradeRow = {
 //   total: number;
 // };
 
-const FAKE_TRADES: TradeRow[] = [
-  {
-    traded_at: "2026-01-20",
-    symbol: "SPY",
-    side: "BUY",
-    qty: 1.5,
-    price: 5425,
-    notional: 8137.5,
-    sig: 1.2483,
-  },
-  {
-    traded_at: "2026-01-19",
-    symbol: "SPY",
-    side: "SELL",
-    qty: 2.0,
-    price: 5402,
-    notional: 10804,
-    sig: -0.8421,
-  },
-  {
-    traded_at: "2026-01-18",
-    symbol: "QQQ",
-    side: "BUY",
-    qty: 3.0,
-    price: 412,
-    notional: 1236,
-    sig: 0.9325,
-  },
-  {
-    traded_at: "2026-01-17",
-    symbol: "SPY",
-    side: "BUY",
-    qty: 1.0,
-    price: 5388,
-    notional: 5388,
-    sig: 0.5561,
-  },
-  {
-    traded_at: "2026-01-16",
-    symbol: "IWM",
-    side: "SELL",
-    qty: 4.0,
-    price: 210,
-    notional: 840,
-    sig: -1.1032,
-  },
-  {
-    traded_at: "2026-01-15",
-    symbol: "SPY",
-    side: "BUY",
-    qty: 2.5,
-    price: 5400,
-    notional: 13500,
-    sig: 1.2959,
-  },
-  {
-    traded_at: "2026-01-14",
-    symbol: "QQQ",
-    side: "SELL",
-    qty: 1.2,
-    price: 405,
-    notional: 486,
-    sig: -0.6543,
-  },
-  {
-    traded_at: "2026-01-13",
-    symbol: "SPY",
-    side: "BUY",
-    qty: 1.8,
-    price: 5375,
-    notional: 9675,
-    sig: 0.8877,
-  },
-  {
-    traded_at: "2026-01-12",
-    symbol: "IWM",
-    side: "BUY",
-    qty: 3.2,
-    price: 208,
-    notional: 665.6,
-    sig: 0.4412,
-  },
-  {
-    traded_at: "2026-01-11",
-    symbol: "SPY",
-    side: "SELL",
-    qty: 2.1,
-    price: 5350,
-    notional: 11235,
-    sig: -0.9724,
-  },
-];
+// const FAKE_TRADES: TradeRow[] = [
+//   {
+//     traded_at: "2026-01-20",
+//     symbol: "SPY",
+//     side: "BUY",
+//     qty: 1.5,
+//     price: 5425,
+//     notional: 8137.5,
+//     sig: 1.2483,
+//   },
+//   {
+//     traded_at: "2026-01-19",
+//     symbol: "SPY",
+//     side: "SELL",
+//     qty: 2.0,
+//     price: 5402,
+//     notional: 10804,
+//     sig: -0.8421,
+//   },
+//   {
+//     traded_at: "2026-01-18",
+//     symbol: "QQQ",
+//     side: "BUY",
+//     qty: 3.0,
+//     price: 412,
+//     notional: 1236,
+//     sig: 0.9325,
+//   },
+//   {
+//     traded_at: "2026-01-17",
+//     symbol: "SPY",
+//     side: "BUY",
+//     qty: 1.0,
+//     price: 5388,
+//     notional: 5388,
+//     sig: 0.5561,
+//   },
+//   {
+//     traded_at: "2026-01-16",
+//     symbol: "IWM",
+//     side: "SELL",
+//     qty: 4.0,
+//     price: 210,
+//     notional: 840,
+//     sig: -1.1032,
+//   },
+//   {
+//     traded_at: "2026-01-15",
+//     symbol: "SPY",
+//     side: "BUY",
+//     qty: 2.5,
+//     price: 5400,
+//     notional: 13500,
+//     sig: 1.2959,
+//   },
+//   {
+//     traded_at: "2026-01-14",
+//     symbol: "QQQ",
+//     side: "SELL",
+//     qty: 1.2,
+//     price: 405,
+//     notional: 486,
+//     sig: -0.6543,
+//   },
+//   {
+//     traded_at: "2026-01-13",
+//     symbol: "SPY",
+//     side: "BUY",
+//     qty: 1.8,
+//     price: 5375,
+//     notional: 9675,
+//     sig: 0.8877,
+//   },
+//   {
+//     traded_at: "2026-01-12",
+//     symbol: "IWM",
+//     side: "BUY",
+//     qty: 3.2,
+//     price: 208,
+//     notional: 665.6,
+//     sig: 0.4412,
+//   },
+//   {
+//     traded_at: "2026-01-11",
+//     symbol: "SPY",
+//     side: "SELL",
+//     qty: 2.1,
+//     price: 5350,
+//     notional: 11235,
+//     sig: -0.9724,
+//   },
+// ];
 
 const TradeLog = () => {
 
@@ -132,7 +123,7 @@ const TradeLog = () => {
     header: "Date Traded",
     size: 180,
   }),
-  col.accessor("symbol", {
+  col.accessor("ticker", {
     header: "Symbol",
     size: 90,
   }),
@@ -152,7 +143,7 @@ const TradeLog = () => {
     header: "Notional",
     size: 160,
   }),
-  col.accessor("sig", {
+  col.accessor("signal", {
   header: "Signal",
   cell: (info) => {
     const v = info.getValue();
@@ -186,17 +177,19 @@ const TradeLog = () => {
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchTrades() {
+    async function fetchData() {
       // Replace with your API
       // const res = await fetch(`/api/trades?page=${page}&pageSize=${pageSize}`);
       // const json = (await res.json()) as TradesResponse;
 
+      const rawData = await fetchTrades(page, pageSize);
+
       if (cancelled) return;
-      setData(FAKE_TRADES.slice((page - 1) * pageSize, page * pageSize));
-      setTotal(FAKE_TRADES.length);
+      setData(rawData.rows);
+      setTotal(rawData.total);
     }
 
-    fetchTrades();
+    fetchData();
     return () => {
       cancelled = true;
     };
@@ -224,7 +217,7 @@ const TradeLog = () => {
 
   
   return (
-    <div className="w-135 h-75 rounded-lg purple-shadow p-6">
+    <div className="w-135 h-75 rounded-lg purple-shadow p-6 relative">
       <div className="w-full">
       <div className="text-white text-md font-semibold tracking-tight flex items-center mb-4">Previous Trades</div>
 
@@ -252,7 +245,7 @@ const TradeLog = () => {
       ))}
 
         {/* Pagination */}
-        <div className="flex items-center justify-end gap-1 text-white/85 text-[10px] mt-4">
+        <div className="flex items-center justify-end gap-1 text-white/85 text-[10px] absolute bottom-4 right-6">
           <button
             className={`px-2 ${canPrev ? "hover:text-white" : "opacity-40 cursor-not-allowed"}`}
             onClick={() => canPrev && setPage((p) => p - 1)}

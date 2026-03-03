@@ -7,7 +7,18 @@ from common.db import SessionLocal
 from .watermark import get_watermark, set_watermark
 from common.logger import get_logger
 from common.scoring import score_articles_regression
+from alpaca_trade_api import REST
+
 log = get_logger("ingest")
+
+APCA_API_BASE_URL = os.getenv("APCA_API_BASE_URL", "https://paper-api.alpaca.markets/v2")
+
+def get_alpaca_client() -> REST:
+    return REST(
+        key_id=os.getenv("APCA_API_KEY_ID"),
+        secret_key=os.getenv("APCA_API_SECRET_KEY"),
+        base_url=APCA_API_BASE_URL,
+    )
 
 def pull_and_process_data():
   MASSIVE_API_KEY = os.getenv("MASSIVE_API_KEY")
@@ -37,18 +48,46 @@ def pull_and_process_data():
         data = response.json()
         print(data)
         articles = data.get("results", [])
-        with SessionLocal() as db, db.begin():
-            set_watermark(db, "last_processed_timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+        
         articles = add_articles_to_db(articles)
         scores = score_articles_regression(articles)
         add_scores_to_db(scores)
-        log.info(f"Processed {len(articles)} articles from Polygon API.")
+        log.info(f"Processed {len(articles)} articles from Massive API.")
+        with SessionLocal() as db, db.begin():
+            set_watermark(db, "last_processed_timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     except httpx.TimeoutException:
-        log.error("Polygon API timed out.")
+        log.error("Massive API timed out.")
     except httpx.HTTPStatusError as e:
-        log.error(f"Polygon returned {e.response.status_code}: {e.response.text}")
+        log.error(f"Massive returned {e.response.status_code}: {e.response.text}")
     except httpx.RequestError as e:
         log.error(f"Network error: {e}")
+        
+  with httpx.Client() as client:
+    try:
+        response = client.get(
+            "https://api.massive.com/v2/last/trade/SPY",
+            headers=headers,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        price = data["results"]["p"]  
+        update_benchmark_prices_in_db("SPY", price)
+        log.info(f"Updated SPY benchmark price: {price}")
+    except httpx.RequestError as e:
+        log.error(f"Network error while fetching equity: {e}")
+    except Exception as e:
+        log.error(f"Error while fetching/updating equity: {e}")
+  
+  # ---- Alpaca connection and sizing ----
+  api = get_alpaca_client()
+  log.info("Connected to Alpaca (paper).")
+
+  # Account equity
+  account = api.get_account()
+  equity = float(account.equity) 
+  update_equity_in_db("SPY", equity)
+  log.info(f"Updated account equity: {equity}")
   
   
 def add_articles_to_db(articles):
@@ -61,7 +100,7 @@ def add_articles_to_db(articles):
                           DO UPDATE SET title = news_headlines.title
                           RETURNING id;
                           """ ),{
-                              "provider": "Polygon",
+                              "provider": "Massive",
                               "provider_id": article["id"],
                               "tickers": article["tickers"],
                               "published_utc": article["published_utc"],
@@ -90,6 +129,29 @@ def add_scores_to_db(scores):
                               "score": article["score_raw"],
                               "p_up": None,
                           })
+          
+def update_equity_in_db(ticker, equity):
+    with SessionLocal() as db, db.begin():
+        db.execute(text("""
+                        INSERT INTO equity_history(ticker, equity, as_of_date)
+                        VALUES (:ticker, :equity, :as_of_date)
+                        """ ),{
+                            "ticker": ticker,
+                            "equity": equity,
+                            "as_of_date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                        })
+        
+def update_benchmark_prices_in_db(ticker, price):
+    with SessionLocal() as db, db.begin():
+        db.execute(text("""
+                        INSERT INTO benchmark_prices(ticker, price, as_of_date)
+                        VALUES (:ticker, :price, :as_of_date)
+                        """ ),{
+                            "ticker": ticker,
+                            "price": price,
+                            "as_of_date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                        })
+         
 
 if __name__ == "__main__":
     log.info("Starting pull_and_process_data()")
