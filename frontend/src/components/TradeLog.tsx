@@ -8,106 +8,9 @@ import {
 
 import { fetchTrades, type TradeRow } from "../lib/fetchData";
 
-// type TradesResponse = {
-//   rows: TradeRow[];
-//   page: number;      // 1-based
-//   pageSize: number;
-//   total: number;
-// };
-
-// const FAKE_TRADES: TradeRow[] = [
-//   {
-//     traded_at: "2026-01-20",
-//     symbol: "SPY",
-//     side: "BUY",
-//     qty: 1.5,
-//     price: 5425,
-//     notional: 8137.5,
-//     sig: 1.2483,
-//   },
-//   {
-//     traded_at: "2026-01-19",
-//     symbol: "SPY",
-//     side: "SELL",
-//     qty: 2.0,
-//     price: 5402,
-//     notional: 10804,
-//     sig: -0.8421,
-//   },
-//   {
-//     traded_at: "2026-01-18",
-//     symbol: "QQQ",
-//     side: "BUY",
-//     qty: 3.0,
-//     price: 412,
-//     notional: 1236,
-//     sig: 0.9325,
-//   },
-//   {
-//     traded_at: "2026-01-17",
-//     symbol: "SPY",
-//     side: "BUY",
-//     qty: 1.0,
-//     price: 5388,
-//     notional: 5388,
-//     sig: 0.5561,
-//   },
-//   {
-//     traded_at: "2026-01-16",
-//     symbol: "IWM",
-//     side: "SELL",
-//     qty: 4.0,
-//     price: 210,
-//     notional: 840,
-//     sig: -1.1032,
-//   },
-//   {
-//     traded_at: "2026-01-15",
-//     symbol: "SPY",
-//     side: "BUY",
-//     qty: 2.5,
-//     price: 5400,
-//     notional: 13500,
-//     sig: 1.2959,
-//   },
-//   {
-//     traded_at: "2026-01-14",
-//     symbol: "QQQ",
-//     side: "SELL",
-//     qty: 1.2,
-//     price: 405,
-//     notional: 486,
-//     sig: -0.6543,
-//   },
-//   {
-//     traded_at: "2026-01-13",
-//     symbol: "SPY",
-//     side: "BUY",
-//     qty: 1.8,
-//     price: 5375,
-//     notional: 9675,
-//     sig: 0.8877,
-//   },
-//   {
-//     traded_at: "2026-01-12",
-//     symbol: "IWM",
-//     side: "BUY",
-//     qty: 3.2,
-//     price: 208,
-//     notional: 665.6,
-//     sig: 0.4412,
-//   },
-//   {
-//     traded_at: "2026-01-11",
-//     symbol: "SPY",
-//     side: "SELL",
-//     qty: 2.1,
-//     price: 5350,
-//     notional: 11235,
-//     sig: -0.9724,
-//   },
-// ];
-
+function formatDateOnly(utcString: string) {
+  return new Date(utcString).toLocaleDateString();
+}
 const TradeLog = () => {
 
   const [data, setData] = useState<TradeRow[]>([]);
@@ -122,6 +25,7 @@ const TradeLog = () => {
   col.accessor("traded_at", {
     header: "Date Traded",
     size: 180,
+    cell: (info) => <span className="text-white/80">{formatDateOnly(info.getValue()).toString()}</span>,  
   }),
   col.accessor("ticker", {
     header: "Symbol",

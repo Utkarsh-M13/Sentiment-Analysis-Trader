@@ -1,6 +1,6 @@
 import {useState } from 'react';
-import data from './dummyEquity.json'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+
 
 function tickFormatter(ms: number, mode: number) {
   const d = new Date(ms);
@@ -22,6 +22,16 @@ function dataFormatter(data: { date: string; equity: number }[]) {
 
   const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date));
 
+  // If only 1 point, add a synthetic previous day point at same equity
+  if (sorted.length === 1) {
+    const only = sorted[0];
+    const onlyMs = new Date(only.date + "T00:00:00Z").getTime();
+    return [
+      { t: onlyMs - 86400000, equity: only.equity },
+      { t: onlyMs, equity: only.equity },
+    ];
+  }
+
   const start = sorted[0].date;
   const end = sorted[sorted.length - 1].date;
 
@@ -38,7 +48,6 @@ function dataFormatter(data: { date: string; equity: number }[]) {
     const dateStr = new Date(t).toISOString().slice(0, 10);
     const found = byDate.get(dateStr);
     if (found !== undefined) currEquity = found;
-
     newData.push({ t, equity: currEquity });
   }
 
@@ -61,6 +70,7 @@ function monthStartTicks(startMs: number, endMs: number) {
 }
 
 function dataFilter(data: { t: number; equity: number }[], mode: number) {
+  if (!data.length) return [];
   const end = data[data.length - 1].t;
   let start = end;
 
@@ -77,15 +87,19 @@ function dataFilter(data: { t: number; equity: number }[], mode: number) {
 
 function domainForMode(mode: number, dataMin: number, dataMax: number): [number, number] {
   const end = dataMax;
+  let start = dataMin;
 
-  if (mode === 0) return [end - DAY, end];        // last 24h
-  if (mode === 1) return [end - 7 * DAY, end];    // last 7d
-  if (mode === 2) return [end - 30 * DAY, end];   // last 30d
-  if (mode === 3) return [end - 90 * DAY, end];   // last 90d
-  if (mode === 4) return [end - 365 * DAY, end];  // last 1y
+  if (mode === 0) start = end - DAY;
+  else if (mode === 1) start = end - 7 * DAY;
+  else if (mode === 2) start = end - 30 * DAY;
+  else if (mode === 3) start = end - 90 * DAY;
+  else if (mode === 4) start = end - 365 * DAY;
+  else if (mode === 5) start = dataMin;
 
-  // "all": use your actual data range
-  return [dataMin, dataMax];
+  // ensure the domain isn't "after" the earliest data point
+  if (start > dataMin) start = dataMin;
+
+  return [start, end];
 }
 
 function ticksForMode(mode: number, domain: [number, number]) {
@@ -118,7 +132,7 @@ function ticksForMode(mode: number, domain: [number, number]) {
   return [];
 }
 
-const Graph = ({ mode } : { mode: number }) => {
+const Graph = ({ mode, data } : { mode: number, data: {date: string, equity: number}[] }) => {
   const [NOW] = useState(() => Date.now());
 
   const formattedData = dataFormatter(data);
@@ -129,7 +143,6 @@ const Graph = ({ mode } : { mode: number }) => {
   const domain = domainForMode(mode, dataMin, dataMax);
   const ticks = ticksForMode(mode, domain);
 
-  
   return (
     <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>

@@ -18,7 +18,7 @@ def is_trading_session_now() -> bool:
         return False
 
     start = dt_time(9, 30)
-    end = dt_time(16, 0)
+    end = dt_time(17, 0)
     t = now.time()
     return start <= t <= end
 

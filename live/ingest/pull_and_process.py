@@ -7,18 +7,22 @@ from common.db import SessionLocal
 from .watermark import get_watermark, set_watermark
 from common.logger import get_logger
 from common.scoring import score_articles_regression
-from alpaca_trade_api import REST
-
 log = get_logger("ingest")
 
-APCA_API_BASE_URL = os.getenv("APCA_API_BASE_URL", "https://paper-api.alpaca.markets/v2")
+def fetch_alpaca_equity() -> float:
+    base = os.getenv("APCA_API_BASE_URL", "https://paper-api.alpaca.markets").rstrip("/")
+    url = base + "/v2/account"
 
-def get_alpaca_client() -> REST:
-    return REST(
-        key_id=os.getenv("APCA_API_KEY_ID"),
-        secret_key=os.getenv("APCA_API_SECRET_KEY"),
-        base_url=APCA_API_BASE_URL,
+    r = httpx.get(
+        url,
+        headers={
+            "APCA-API-KEY-ID": os.environ["APCA_API_KEY_ID"],
+            "APCA-API-SECRET-KEY": os.environ["APCA_API_SECRET_KEY"],
+        },
+        timeout=10,
     )
+    r.raise_for_status()
+    return float(r.json()["equity"])
 
 def pull_and_process_data():
   MASSIVE_API_KEY = os.getenv("MASSIVE_API_KEY")
@@ -65,13 +69,16 @@ def pull_and_process_data():
   with httpx.Client() as client:
     try:
         response = client.get(
-            "https://api.massive.com/v2/last/trade/SPY",
+            "https://api.massive.com/v2/aggs/ticker/SPY/prev",
             headers=headers,
         )
+
         response.raise_for_status()
         data = response.json()
+        print (f"SPY price response: {data}")
 
-        price = data["results"]["p"]  
+        price = data["results"][0]["vw"] if data.get("results") else None
+        print(f"SPY price: {price}")
         update_benchmark_prices_in_db("SPY", price)
         log.info(f"Updated SPY benchmark price: {price}")
     except httpx.RequestError as e:
@@ -79,13 +86,9 @@ def pull_and_process_data():
     except Exception as e:
         log.error(f"Error while fetching/updating equity: {e}")
   
-  # ---- Alpaca connection and sizing ----
-  api = get_alpaca_client()
-  log.info("Connected to Alpaca (paper).")
 
   # Account equity
-  account = api.get_account()
-  equity = float(account.equity) 
+  equity = fetch_alpaca_equity()
   update_equity_in_db("SPY", equity)
   log.info(f"Updated account equity: {equity}")
   
@@ -146,6 +149,8 @@ def update_benchmark_prices_in_db(ticker, price):
         db.execute(text("""
                         INSERT INTO benchmark_prices(ticker, price, as_of_date)
                         VALUES (:ticker, :price, :as_of_date)
+                        ON CONFLICT (ticker, as_of_date)
+                        DO UPDATE SET price = EXCLUDED.price;
                         """ ),{
                             "ticker": ticker,
                             "price": price,

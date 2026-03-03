@@ -60,7 +60,86 @@ export async function fetchHeadlines(
     .range(from, to);
 
   if (error) throw error;
-  console.log('data', data)
 
   return { rows: (data as HeadlineRow[]) ?? [], total: count ?? 0 };
+}
+
+export async function fetchEquityData() {
+  const { data, error } = await supabase
+    .from("equity_history")
+    .select("as_of_date, equity")
+    .eq("ticker", "SPY")
+    .order("as_of_date", { ascending: true });
+  
+
+  if (error) throw error;
+
+
+  return (data as { as_of_date: string; equity: number }[]).map((row) => ({
+    date: formatDateOnly(row.as_of_date).toString(),
+    equity: row.equity,
+  })); 
+}
+
+export async function fetchBnHData() {
+  const { data, error } = await supabase
+    .from("spy_bnh_view")
+    .select("as_of_date, equity")
+    .order("as_of_date", { ascending: true });
+      
+
+  if (error) throw error; 
+
+  return (data as { as_of_date: string; equity: number }[]).map((row) => ({
+    date: formatDateOnly(row.as_of_date).toString(),
+    equity: row.equity,
+  })); 
+}
+
+function formatDateOnly(utcString: string) {
+  return new Date(utcString).toISOString().slice(0, 10);
+}
+
+export async function fetchSharpeRatio(): Promise<number | null> {
+  const { data, error } = await supabase.rpc("get_sharpe_ratio");
+  if (error) throw error;
+  return data ?? null;
+}
+
+export async function fetchExposure(): Promise<number | null> {
+  const { data, error } = await supabase.rpc("get_gross_exposure_spy");
+  if (error) throw error;
+  return data ?? null;
+}
+
+export async function get_average_allocation(): Promise<number | null> {
+  const { data, error } = await supabase.rpc("get_latest_daily_exposure_spy");
+  if (error) throw error;
+  return data ?? null;
+}
+
+export async function get_last_five_trade_signals(): Promise<{trade_day: string; signal: string}[] | null> {
+  const { data, error } = await supabase.rpc("get_last_5_trade_signals");
+  if (error) throw error;
+  return data ?? null;
+}
+
+type EquitySnapshot = {
+  current_equity: number
+  current_as_of: string
+  reference_equity: number
+  reference_as_of: string
+  reference_source: string
+  weekly_return: number | null
+}
+
+export async function get_equity_now_and_reference(): Promise<EquitySnapshot | null> {
+  const { data, error } = await supabase.rpc("get_equity_now_and_reference");
+
+  console.log("equity data", data);
+
+  if (error) throw error;
+
+  if (!data || data.length === 0) return null;
+  return data[0];
 }

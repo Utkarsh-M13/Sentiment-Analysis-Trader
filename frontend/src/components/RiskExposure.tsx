@@ -6,16 +6,38 @@ import {
   YAxis,
   ResponsiveContainer,
 } from "recharts";
+import { fetchExposure, get_average_allocation, get_last_five_trade_signals } from "../lib/fetchData";
 
-const signalData = [
-  { name: "Mon", value: 2.6 },
-  { name: "Tue", value: 1.8 },
-  { name: "Wed", value: 2.1 },
-  { name: "Thu", value: 0.4 },
-  { name: "Fri", value: 1.9 },
-];
+// const signalData = [
+//   { name: "Mon", value: 2.6 },
+//   { name: "Tue", value: 1.8 },
+//   { name: "Wed", value: 2.1 },
+//   { name: "Thu", value: 0.4 },
+//   { name: "Fri", value: 1.9 },
+// ];
 
 const SignalGraph = () => {
+  const [signalData, setSignalData] = useState<{ name: string; value: number }[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Simulate fetching data with a delay
+      const signalRaw = await get_last_five_trade_signals();
+      console.log('signalRaw', signalRaw)
+      if (signalRaw !== null && signalRaw !== undefined) {
+        const signalFormatted = signalRaw.map((item) => ({
+          name: item.trade_day,
+          value: parseFloat(item.signal),
+        }));
+        console.log('signalFormatted', signalFormatted)
+        setSignalData(signalFormatted)
+      }
+    };
+
+    fetchData();
+  }, []);
+
+
   return (
     <div>
       <div className="text-[8px] text-white/85 mb-2 mt-8">Signal Graph</div>
@@ -75,7 +97,7 @@ const ProgressBar = ({ label, value, gradient }: ProgressProps) => {
         style={{ width: `${shown}%` }}
       />
       <div className="absolute inset-0 flex items-center pl-2 font-light text-black text-xs">
-        {value}%
+        {value.toString().slice(0, 5)}%
       </div>
     </div>
     </div>
@@ -83,8 +105,25 @@ const ProgressBar = ({ label, value, gradient }: ProgressProps) => {
 };
 
 const RiskExposure = () => {
-  const portfolioExposure = 65;
-  const avgAllocation = 50;
+  const [portfolioExposure, setPortfolioExposure] = useState(0);
+  const [avgAllocation, setAvgAllocation] = useState(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Simulate fetching data with a delay
+      const rawExposure = await fetchExposure();
+      if (rawExposure !== null && rawExposure !== undefined) {
+        setPortfolioExposure(parseFloat(rawExposure.toPrecision(4)) * 100);
+      }
+
+      const avg = await get_average_allocation();
+      if (avg !== null && avg !== undefined) {
+        setAvgAllocation(parseFloat(avg.toPrecision(4)) * 100);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <div className="w-40 h-75 rounded-lg purple-shadow p-4">

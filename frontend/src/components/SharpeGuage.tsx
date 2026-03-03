@@ -13,44 +13,6 @@ function clamp(x: number, a: number, b: number) {
   return Math.min(b, Math.max(a, x));
 }
 
-// function hexToRgb(hex: string) {
-//   const h = hex.replace("#", "");
-//   const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
-//   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-// }
-
-// function rgbToHex(r: number, g: number, b: number) {
-//   const to = (v: number) => v.toString(16).padStart(2, "0");
-//   return `#${to(r)}${to(g)}${to(b)}`;
-// }
-
-// function lerp(a: number, b: number, t: number) {
-//   return a + (b - a) * t;
-// }
-
-// function lerpColor(c1: string, c2: string, t: number) {
-//   const A = hexToRgb(c1);
-//   const B = hexToRgb(c2);
-//   return rgbToHex(
-//     Math.round(lerp(A.r, B.r, t)),
-//     Math.round(lerp(A.g, B.g, t)),
-//     Math.round(lerp(A.b, B.b, t))
-//   );
-// }
-
-// function sharpeColor(value: number) {
-//   const v = clamp(value, 0, 5);
-
-//   const red = "#ef4444";     // Tailwind red-500
-//   const yellow = "#f59e0b";  // amber-500
-//   const teal = "#17c9a3";    // close to your green-blue
-
-//   if (v <= 3) {
-//     return lerpColor(red, yellow, v / 3);
-//   }
-//   return lerpColor(yellow, teal, (v - 3) / 2);
-// }
-
 function normalizeDeg(a: number) {
   return ((a % 360) + 360) % 360;
 }
