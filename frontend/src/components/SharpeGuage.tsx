@@ -45,11 +45,11 @@ export default function SharpeGauge({
   value,
   min = 0,
   max = 5,
-  strokeWidth = 10,
+  strokeWidth = 9.5,
   size = 110,
   title = "Sharpe Ratio",
 }: GaugeProps) {
-  const v = clamp(value, min, max);
+  const v = value > 0 ? clamp(value, min, max) : clamp(value, -max, -min);
   const pct = (v - min) / (max - min); // 0..1
 
   // Geometry
@@ -74,14 +74,16 @@ export default function SharpeGauge({
   const dashArray = pathLen;
   const dashOffset = pathLen * (1 - pct);
 
-  const activeColor = "#1ABD8C"; // keep 0..5 semantics
+  const activeColor = value > 0 ? "#1ABD8C" : "#FF4500";
+
+
 
   return (
-    <div className="w-full h-full rounded-3xl p-8 flex flex-col items-center justify-center">
-      <div className="text-white text-[16px] font-semibold tracking-tight mb-4">{title}</div>
+    <div className="rounded-3xl p-8 flex flex-col items-center justify-center mt-4 2xl:mt-8">
+      <div className="text-white 2xl:text-[20px] text-sm font-semibold tracking-tight mb-4 2xl:mb-6">{title}</div>
 
-      <div className="relative" style={{ width: size, height: size - 20 }}>
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="block">
+    <div className="relative w-[100px] h-[80px] 2xl:w-[160px] 2xl:h-[140px]">
+        <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full">
           {/* Track */}
           <path
             d={pathD}
@@ -110,8 +112,8 @@ export default function SharpeGauge({
         </svg>
 
         {/* Center value */}
-        <div className="absolute inset-0 flex items-center justify-center top-2">
-          <div className="text-white text-3xl font-semibold">{v.toFixed(1)}</div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-white 2xl:text-3xl text-xl font-semibold">{v < 0 ? (-1 * v).toFixed(1) : v.toFixed(1)}</div>
         </div>
       </div>
     </div>
