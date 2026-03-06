@@ -124,7 +124,7 @@ const HeadlineLog = () => {
   }, [page, pageCount]);
 
   return (
-    <div className="w-135 h-75 rounded-lg purple-shadow p-6 relative">
+    <div className="2xl:w-180 2xl:h-100 w-135 h-75 rounded-lg purple-shadow p-6 relative">
       <div className="w-full">
         <div className="text-white text-md font-semibold tracking-tight flex items-center mb-4">
           News Headlines

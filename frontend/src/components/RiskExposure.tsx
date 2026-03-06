@@ -40,9 +40,9 @@ const SignalGraph = () => {
 
   return (
     <div>
-      <div className="text-[8px] text-white/85 mb-2 mt-8">Signal Graph</div>
+      <div className="text-[8px] text-white/85 mb-2 mt-8 2xl:mt-10">Signal Graph</div>
 
-      <div className="h-20 w-full min-w-0">
+      <div className="2xl:h-32 h-20 w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={signalData} margin={{ top: 6, right: 0, left: 0, bottom: 0 }}>
             <XAxis
@@ -88,10 +88,10 @@ const ProgressBar = ({ label, value, gradient }: ProgressProps) => {
   }, [value]);
 
   return (
-    <div className="mb-4">
+    <div className=" 2xl:mb-8 mb-4">
       <div className="text-[8px] text-white/85 mb-3">{label}</div>
 
-      <div className="relative h-5 rounded-sm bg-black/60 border border-white/10 overflow-hidden">
+      <div className="relative 2xl:h-7 h-5 rounded-sm bg-black/60 border border-white/10 overflow-hidden">
       <div
         className={`h-full bg-linear-to-r ${gradient} rounded-sm transition-[width] duration-700 ease-out`}
         style={{ width: `${shown}%` }}
@@ -126,7 +126,7 @@ const RiskExposure = () => {
   }, []);
 
   return (
-    <div className="w-40 h-75 rounded-lg purple-shadow p-4">
+    <div className="2xl:w-56 2xl:h-100 w-40 h-75 rounded-lg purple-shadow p-4">
       <div className="text-md font-semibold mb-4 tracking-tight text-white">
         Risk & Exposure
       </div>

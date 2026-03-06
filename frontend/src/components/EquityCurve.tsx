@@ -30,7 +30,7 @@ const EquityCurve = () => {
   }, [])
 
   return (
-    <div className="w-120 h-75 rounded-lg purple-shadow p-5">
+    <div className="2xl:w-160 2xl:h-100 w-120 h-75 rounded-lg purple-shadow p-5">
       <div className="flex justify-between items-center mb-8 w-full">
         <div>
           <div className="text-white font-semibold text-md"> Equity Curve</div>
@@ -38,7 +38,7 @@ const EquityCurve = () => {
         </div>
         <RangeSelector selected={selected} setSelected={setSelected}></RangeSelector>
       </div>
-      <div className="w-108 h-49">
+      <div className="2xl:w-135 2xl:h-64 w-108 h-48">
         <Graph mode={selected} data={data}></Graph>
       </div>      
     </div>

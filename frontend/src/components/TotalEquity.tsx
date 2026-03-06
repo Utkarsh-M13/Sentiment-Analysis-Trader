@@ -50,10 +50,10 @@ const TotalEquity = () => {
   
 
   return (
-    <div className="w-40 h-30 rounded-lg purple-shadow text-white p-4 text-center">
-      <div className="font-semibold text-[16px]">Total Equity</div>
-      <div className="font-semibold text-2xl mt-2">${formatNumber(equity)}</div>
-      <div className="text-xs mt-2 text-[#9F9F9F]">
+    <div className="2xl:w-56 2xl:h-40 w-40 h-30 rounded-lg purple-shadow text-white p-4 text-center flex justify-center items-center flex-col">
+      <div className="font-semibold text-[16px] 2xl:text-[18px] bg-gradient bg-clip-text text-transparent">Total Equity</div>
+      <div className="font-semibold text-2xl mt-2 2xl:mt-4 2xl:text-3xl">${formatNumber(equity)}</div>
+      <div className="text-xs 2xl:text-md 2xl:mt-4 mt-2 text-[#9F9F9F]">
         <InnerDiv thisWeekChange={thisWeekChange} ></InnerDiv>
       </div>
     </div>
