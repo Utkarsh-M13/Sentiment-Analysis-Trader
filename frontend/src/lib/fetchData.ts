@@ -74,9 +74,10 @@ export async function fetchEquityData() {
 
   if (error) throw error;
 
+  console.log('datalast', data[0])
 
   return (data as { as_of_date: string; equity: number }[]).map((row) => ({
-    date: formatDateOnly(row.as_of_date).toString(),
+    date: row.as_of_date.toString(),
     equity: row.equity,
   })); 
 }
@@ -91,14 +92,12 @@ export async function fetchBnHData() {
   if (error) throw error; 
 
   return (data as { as_of_date: string; equity: number }[]).map((row) => ({
-    date: formatDateOnly(row.as_of_date).toString(),
+    date: row.as_of_date.toString(),
     equity: row.equity,
   })); 
 }
 
-function formatDateOnly(utcString: string) {
-  return new Date(utcString).toISOString().slice(0, 10);
-}
+
 
 export async function fetchSharpeRatio(): Promise<number | null> {
   const { data, error } = await supabase.rpc("get_sharpe_ratio");

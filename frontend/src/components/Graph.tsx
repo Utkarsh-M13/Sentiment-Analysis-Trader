@@ -20,36 +20,9 @@ function tickFormatter(ms: number, mode: number) {
 function dataFormatter(data: { date: string; equity: number }[]) {
   if (!data.length) return [];
 
-  const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date));
+  const newData: { t: number; equity: number }[] = data.map((x) => {return {t: new Date(x.date).getTime(), equity: x.equity}}).sort((a, b) => a.t - b.t);
 
-  // If only 1 point, add a synthetic previous day point at same equity
-  if (sorted.length === 1) {
-    const only = sorted[0];
-    const onlyMs = new Date(only.date + "T00:00:00Z").getTime();
-    return [
-      { t: onlyMs - 86400000, equity: only.equity },
-      { t: onlyMs, equity: only.equity },
-    ];
-  }
-
-  const start = sorted[0].date;
-  const end = sorted[sorted.length - 1].date;
-
-  const byDate = new Map<string, number>();
-  for (const p of sorted) byDate.set(p.date, p.equity);
-
-  const startMs = new Date(start + "T00:00:00Z").getTime();
-  const endMs = new Date(end + "T00:00:00Z").getTime();
-
-  const newData: { t: number; equity: number }[] = [];
-  let currEquity = byDate.get(start) ?? sorted[0].equity;
-
-  for (let t = startMs; t <= endMs; t += 86400000) {
-    const dateStr = new Date(t).toISOString().slice(0, 10);
-    const found = byDate.get(dateStr);
-    if (found !== undefined) currEquity = found;
-    newData.push({ t, equity: currEquity });
-  }
+  console.log('newData', new Date(newData[newData.length - 1].t))
 
   return newData;
 }
@@ -69,25 +42,28 @@ function monthStartTicks(startMs: number, endMs: number) {
   return ticks;
 }
 
+const DAY = 86400000;
+
 function dataFilter(data: { t: number; equity: number }[], mode: number) {
   if (!data.length) return [];
   const end = data[data.length - 1].t;
   let start = end;
 
-  if (mode === 1) start = end - 7 * 86400000;
-  else if (mode === 2) start = end - 30 * 86400000;
-  else if (mode === 3) start = end - 90 * 86400000;
-  else if (mode === 4) start = end - 365 * 86400000;
+  if (mode === 0) start = end - DAY;
+  else if (mode === 1) start = end - 7 * DAY;
+  else if (mode === 2) start = end - 30 * DAY;
+  else if (mode === 3) start = end - 90 * DAY;
+  else if (mode === 4) start = end - 365 * DAY;
   else if (mode === 5) start = data[0].t;
 
   return data.filter((p) => p.t >= start && p.t <= end);
 }
 
-  const DAY = 86400000;
 
 function domainForMode(mode: number, dataMin: number, dataMax: number): [number, number] {
   const end = dataMax;
   let start = dataMin;
+  console.log("datamax", new Date(dataMax))
 
   if (mode === 0) start = end - DAY;
   else if (mode === 1) start = end - 7 * DAY;
@@ -96,8 +72,7 @@ function domainForMode(mode: number, dataMin: number, dataMax: number): [number,
   else if (mode === 4) start = end - 365 * DAY;
   else if (mode === 5) start = dataMin;
 
-  // ensure the domain isn't "after" the earliest data point
-  if (start > dataMin) start = dataMin;
+  if (start < dataMin) start = dataMin
 
   return [start, end];
 }
@@ -106,23 +81,23 @@ function ticksForMode(mode: number, domain: [number, number]) {
   const [start, end] = domain;
 
   if (mode === 0) {
-    return [end];
+    return Array.from({length: 6}, (_, i) => end - i * DAY/6);
   }
 
   if (mode === 1) {
-    return Array.from({ length: 8 }, (_, i) => start + i * DAY);
+    return Array.from({ length: 8 }, (_, i) => end - i * DAY);
   }
 
   if (mode === 2) {
-    return Array.from({ length: 7 }, (_, i) => start + i * 5 * DAY);
+    return Array.from({ length: 6 }, (_, i) => end - i * 5  * DAY);
   }
 
   if (mode === 3) {
-    return Array.from({ length: 7 }, (_, i) => start + i * 15 * DAY);
+    return Array.from({ length: 3 }, (_, i) => end - i * 30 * DAY);
   }
 
   if (mode === 4) {
-    return Array.from({ length: 13 }, (_, i) => start + i * 30 * DAY);
+    return Array.from({ length: 13 }, (_, i) => end - i * 30 * DAY);
   }
 
   if (mode === 5) {
@@ -140,11 +115,21 @@ const Graph = ({ mode, data } : { mode: number, data: {date: string, equity: num
   const dataMin = formattedData[0]?.t ?? NOW;
   const dataMax = formattedData[formattedData.length - 1]?.t ?? NOW;
 
+  console.log('data', dataMax)
+
+  // const latestEquity = formattedData[formattedData.length - 1]?.equity;
+
   const domain = domainForMode(mode, dataMin, dataMax);
   const ticks = ticksForMode(mode, domain);
 
+  console.log('ticks', ticks.map((t) => new Date(t)))
+
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <>
+      {/* <div style={{ display: "flex", justifyContent: "flex-end", padding: "4px 8px 0", color: "rgba(16, 185, 129, 1)", fontSize: "1rem", fontWeight: 600,  marginBottom: 12 }}>
+        {latestEquity !== undefined ? `$${latestEquity.toFixed(2)}` : "--"}
+      </div> */}
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
           <defs>
             {/* Fill gradient under the line */}
@@ -161,7 +146,6 @@ const Graph = ({ mode, data } : { mode: number, data: {date: string, equity: num
 
           <CartesianGrid stroke="rgba(255,255,255,0.10)" vertical={false} />
 
-          
 
           <XAxis
           dataKey="t"
@@ -245,6 +229,7 @@ const Graph = ({ mode, data } : { mode: number, data: {date: string, equity: num
           /> */}
         </AreaChart>
       </ResponsiveContainer>
+    </>
   )
 }
 
