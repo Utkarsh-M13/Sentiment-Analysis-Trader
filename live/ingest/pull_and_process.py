@@ -6,6 +6,7 @@ from sqlalchemy import text
 from common.db import SessionLocal
 from .watermark import get_watermark, set_watermark
 from common.logger import get_logger
+from datetime import datetime, timedelta, timezone
 from common.scoring import score_articles_regression
 log = get_logger("ingest")
 
@@ -30,6 +31,9 @@ def pull_and_process_data():
   since_timestamp = None
   with SessionLocal() as db, db.begin():
     since_timestamp = get_watermark(db, "last_processed_timestamp", default="2025-10-01T00:00:00Z")
+    
+  last_seen = datetime.fromisoformat(since_timestamp.replace("Z", "+00:00"))
+  query_since = (last_seen - timedelta(minutes=10)).isoformat().replace("+00:00", "Z")
 
   print(f"Pulling data since {since_timestamp}")
 
@@ -37,9 +41,9 @@ def pull_and_process_data():
     try:
         params = {
             "ticker": "SPY",
-            "published_utc.gte": since_timestamp,
+            "published_utc.gte": query_since,
             "order": "asc",
-            "limit": 100,
+            "limit": 1000,
             "sort": "published_utc",
         }
 
@@ -53,12 +57,17 @@ def pull_and_process_data():
         print(data)
         articles = data.get("results", [])
         
+        
         articles = add_articles_to_db(articles)
         scores = score_articles_regression(articles)
         add_scores_to_db(scores)
+        
+        if articles:
+          max_published = max(a["published_utc"] for a in articles)
+          with SessionLocal() as db, db.begin():
+            set_watermark(db, "last_processed_timestamp", max_published)
+            
         log.info(f"Processed {len(articles)} articles from Massive API.")
-        with SessionLocal() as db, db.begin():
-            set_watermark(db, "last_processed_timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     except httpx.TimeoutException:
         log.error("Massive API timed out.")
     except httpx.HTTPStatusError as e:
