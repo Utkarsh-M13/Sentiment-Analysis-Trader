@@ -108,7 +108,7 @@ def add_articles_to_db(articles):
             res = db.execute(text("""
                           INSERT INTO news_headlines(provider, provider_id, tickers, published_utc, url, title, description, source_name)
                           VALUES (:provider, :provider_id, :tickers, :published_utc, :url, :title, :description, :source_name)
-                          ON CONFLICT (provider, provider_id) 
+                          ON CONFLICT (provider_id)
                           DO UPDATE SET title = news_headlines.title
                           RETURNING id;
                           """ ),{
