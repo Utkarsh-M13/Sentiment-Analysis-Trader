@@ -8,13 +8,6 @@ import {
 } from "recharts";
 import { fetchExposure, get_average_allocation, get_last_five_trade_signals } from "../lib/fetchData";
 
-// const signalData = [
-//   { name: "Mon", value: 2.6 },
-//   { name: "Tue", value: 1.8 },
-//   { name: "Wed", value: 2.1 },
-//   { name: "Thu", value: 0.4 },
-//   { name: "Fri", value: 1.9 },
-// ];
 
 const SignalGraph = () => {
   const [signalData, setSignalData] = useState<{ name: string; value: number }[]>([]);
@@ -26,10 +19,9 @@ const SignalGraph = () => {
       console.log('signalRaw', signalRaw)
       if (signalRaw !== null && signalRaw !== undefined) {
         const signalFormatted = signalRaw.map((item) => ({
-          name: item.trade_day,
+          name: item.trade_day.slice(0, 3),
           value: parseFloat(item.signal),
         }));
-        console.log('signalFormatted', signalFormatted)
         setSignalData(signalFormatted)
       }
     };
